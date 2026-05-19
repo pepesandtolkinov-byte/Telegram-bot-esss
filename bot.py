@@ -3,7 +3,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
 
 # ТОКЕН ОТ @BotFather (кавычки не удаляй)
-API_TOKEN = 8637040129:AAFadeiQgcazSCUL3Ho7K5-DOo5_sxdBiyk
+API_TOKEN = '8637040129:AAFadeiQgcazSCUL3Ho7K5-DOo5_sxdBiyk'
 
 # ТВОЙ ID ЦИФРАМИ (без кавычек)
 ADMIN_ID = 7942812864
