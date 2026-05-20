@@ -3,20 +3,21 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
 from aiogram.dispatcher.filters import Text
 
-API_TOKEN = '8637040129:AAFadeiQgcazSCUL3Ho7KS-D0o5_sxdBiyk'  # Твой токен
-OWNER_ID = 7942812864  # Твой личный ID (Главный админ)
+# Твой новый токен и твой ID уже внутри!
+API_TOKEN = '8637040129:AAGAfQVVO2Vq1aidvj5opvLo7CPcSgGTNgc'  
+OWNER_ID = 7942812864  
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
 # --- БАЗА ДАННЫХ В ПАМЯТИ ---
-users_db = {}       # Пользователи: {user_id: {"username": "...", "requests": 4, ...}}
-admins_list = set() # ID обычных админов, которых ты добавил
-black_list = set()  # Черный список
-admin_state = {}    # Состояния для админки
-user_state = {}     # Состояния для юзеров
+users_db = {}       
+admins_list = set() 
+black_list = set()  
+admin_state = {}    
+user_state = {}     
 
-DEFAULT_COOLDOWN = 8 * 3600  # 8 часов
+DEFAULT_COOLDOWN = 8 * 3600  
 DEFAULT_REQUESTS = 4
 
 def check_and_reset_limits(user_id):
@@ -27,7 +28,6 @@ def check_and_reset_limits(user_id):
             user_data["requests"] = DEFAULT_REQUESTS
             user_data["last_reset"] = current_time
 
-# Проверка: является ли человек админом или владельцем
 def is_any_admin(user_id):
     return user_id == OWNER_ID or user_id in admins_list
 
@@ -89,7 +89,6 @@ async def admin_panel(message: types.Message):
     btn_time = types.InlineKeyboardButton(text="⏳ Изменить время обновления", callback_data="adm_time")
     btn_ban = types.InlineKeyboardButton(text="🚫 Черный список (Добавить)", callback_data="adm_ban")
     
-    # Кнопки управления админами (видны ТОЛЬКО тебе)
     if user_id == OWNER_ID:
         btn_add_admin = types.InlineKeyboardButton(text="👑 Добавить админа", callback_data="own_add_adm")
         btn_rem_admin = types.InlineKeyboardButton(text="🔨 Снять админа", callback_data="own_rem_adm")
@@ -108,7 +107,6 @@ async def admin_callback(callback: types.CallbackQuery):
 
     action = callback.data
     
-    # Общие команды для всех админов
     if action == "adm_req":
         admin_state[user_id] = "waiting_for_req"
         await callback.message.answer("Введите юзернейм и количество запросов.\nПример: `@username 10`")
@@ -119,7 +117,6 @@ async def admin_callback(callback: types.CallbackQuery):
         admin_state[user_id] = "waiting_for_ban"
         await callback.message.answer("Введите юзернейм для бана.\nПример: `@username`")
         
-    # Команды ТОЛЬКО для Создателя (тебя)
     elif action == "own_add_adm" and user_id == OWNER_ID:
         admin_state[user_id] = "waiting_for_add_adm"
         await callback.message.answer("Введите юзернейм будущего админа.\nПример: `@username`")
@@ -129,7 +126,7 @@ async def admin_callback(callback: types.CallbackQuery):
     
     await callback.answer()
 
-# --- ОБРАБОТКА ЗАЯВОК (Одобрять могут и админы, и ты) ---
+# --- ОБРАБОТКА ЗАЯВОК ---
 @dp.callback_query_handler(Text(startswith="ticket_"))
 async def handle_ticket(callback: types.CallbackQuery):
     if not is_any_admin(callback.from_user.id):
@@ -169,7 +166,6 @@ async def handle_messages(message: types.Message):
         await message.answer("Вы заблокированы. ❌")
         return
 
-    # Логика ввода количества запросов обычным юзером
     if user_id in user_state and user_state[user_id] == "waiting_for_amount":
         del user_state[user_id]
         try:
@@ -185,10 +181,8 @@ async def handle_messages(message: types.Message):
             btn_no = types.InlineKeyboardButton(text="❌ Отклонить", callback_data=f"ticket_reject_{user_id}_{amount}")
             keyboard.add(btn_yes, btn_no)
             
-            # Отправляем заявку Главному админу
             await bot.send_message(OWNER_ID, f"📥 *Новая заявка!*\nОт: {username}\nКоличество: *{amount}*", parse_mode="Markdown", reply_markup=keyboard)
             
-            # Отправляем заявку остальным админам, если они есть
             for adm in admins_list:
                 try:
                     await bot.send_message(adm, f"📥 *Новая заявка!*\nОт: {username}\nКоличество: *{amount}*", parse_mode="Markdown", reply_markup=keyboard)
@@ -200,7 +194,6 @@ async def handle_messages(message: types.Message):
             await message.answer("Введите число от 1 до 10.")
             return
 
-    # Логика АДМИНОВ и СОЗДАТЕЛЯ
     if is_any_admin(user_id) and user_id in admin_state:
         state = admin_state[user_id]
         del admin_state[user_id]
@@ -219,7 +212,6 @@ async def handle_messages(message: types.Message):
                 await message.answer("❌ Пользователь еще не заходил в бота.")
                 return
 
-            # Общие команды админов
             if state == "waiting_for_req":
                 count = int(parts[1])
                 users_db[target_id]["requests"] = count
@@ -235,7 +227,6 @@ async def handle_messages(message: types.Message):
                 black_list.add(target_id)
                 await message.answer(f"🚫 @{target_username} добавлен в ЧС.")
                 
-            # Спецкоманды ТОЛЬКО для OWNER_ID
             elif state == "waiting_for_add_adm" and user_id == OWNER_ID:
                 admins_list.add(target_id)
                 await message.answer(f"👑 @{target_username} теперь назначен Администратором!")
@@ -244,13 +235,12 @@ async def handle_messages(message: types.Message):
                     admins_list.remove(target_id)
                     await message.answer(f"🔨 @{target_username} снят с должности администратора.")
                 else:
-                    await message.answer("Этот пользователь не был админом.")
+                    await message.answer("Этот... не был админом.")
             return
         except Exception:
             await message.answer("❌ Ошибка ввода!")
             return
 
-    # Поиск ID для обычных пользователей
     if text.startswith("@"):
         check_and_reset_limits(user_id)
         if users_db[user_id]["requests"] <= 0:
@@ -277,4 +267,4 @@ async def handle_messages(message: types.Message):
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
-        
+    
